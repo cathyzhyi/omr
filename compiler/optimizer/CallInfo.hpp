@@ -445,7 +445,7 @@ class TR_IndirectCallSite : public TR_CallSite
 		//capabilities
 		bool addTargetIfMethodIsNotOverriden (TR_InlinerBase* inliner);
 		bool addTargetIfMethodIsNotOverridenInReceiversHierarchy (TR_InlinerBase* inliner);
-		bool addTargetIfThereIsSingleImplementer(TR_InlinerBase* inliner);
+		virtual bool addTargetIfThereIsSingleJittedImplementer(TR_InlinerBase* inliner);
 
       virtual TR_OpaqueClassBlock* getClassFromMethod ()
          {

@@ -3728,15 +3728,15 @@ OMR_InlinerUtil::addTargetIfMethodIsNotOverridenInReceiversHierarchy(TR_Indirect
  * find the single implementer and add it as the target of this callsite
  */
 bool
-OMR_InlinerUtil::addTargetIfThereIsSingleImplementer (TR_IndirectCallSite *callsite)
+OMR_InlinerUtil::addTargetIfThereIsSingleJittedImplementer(TR_IndirectCallSite *callsite)
    {
    return false;
    }
 
 bool
-TR_IndirectCallSite::addTargetIfThereIsSingleImplementer (TR_InlinerBase* inliner)
+TR_IndirectCallSite::addTargetIfThereIsSingleJittedImplementer(TR_InlinerBase* inliner)
    {
-   return inliner->getUtil()->addTargetIfThereIsSingleImplementer(this);
+   return inliner->getUtil()->addTargetIfThereIsSingleJittedImplementer(this);
    }
 
 bool TR_IndirectCallSite::findCallSiteTarget (TR_CallStack *callStack, TR_InlinerBase* inliner)
@@ -3745,8 +3745,8 @@ bool TR_IndirectCallSite::findCallSiteTarget (TR_CallStack *callStack, TR_Inline
 
    if (addTargetIfMethodIsNotOverriden(inliner) ||
        addTargetIfMethodIsNotOverridenInReceiversHierarchy(inliner) ||
-       addTargetIfThereIsSingleImplementer(inliner) ||
-       findCallTargetUsingArgumentPreexistence(inliner))
+       findCallTargetUsingArgumentPreexistence(inliner) ||
+       addTargetIfThereIsSingleJittedImplementer(inliner))
       {
       return true;
       }

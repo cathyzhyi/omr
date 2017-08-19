@@ -4395,6 +4395,8 @@ void TR_LoopVersioner::versionNaturalLoop(TR_RegionStructure *whileLoop, List<TR
       safeToRemoveOSRGuards = true;
       ListIterator<TR::Block> blocksIt(&blocksInWhileLoop);
       TR::Node *osrGuard = NULL;
+      bool osrInfraRemoved = comp()->osrInfrastructureRemoved();
+      comp()->setOSRInfrastructureRemoved(false);
       for (TR::Block *block = blocksIt.getCurrent(); safeToRemoveOSRGuards && block; block = blocksIt.getNext())
          {
          for (TR::TreeTop *tt = block->getEntry(); tt != block->getExit(); tt = tt->getNextTreeTop())
@@ -4411,6 +4413,8 @@ void TR_LoopVersioner::versionNaturalLoop(TR_RegionStructure *whileLoop, List<TR
                }
             }
          }
+
+      comp()->setOSRInfrastructureRemoved(osrInfraRemoved);
       if (seenOSRGuards && safeToRemoveOSRGuards)
          {
          if (performTransformation(comp(), "%sCreate versioned OSRGuard\n", OPT_DETAILS_LOOP_VERSIONER))

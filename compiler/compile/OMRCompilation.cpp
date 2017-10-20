@@ -297,7 +297,8 @@ OMR::Compilation::Compilation(
    _gpuKernelLineNumberList(m),
    _gpuPtxCount(0),
    _bitVectorPool(self()),
-   _tlsManager(*self())
+   _tlsManager(*self()),
+   _canBookkeepDeadSlotsForOSRPoint(true)
    {
 
    //Avoid expensive initialization and uneeded option checking if we are doing AOT Loads

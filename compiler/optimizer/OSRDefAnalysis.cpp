@@ -604,6 +604,20 @@ int32_t TR_OSRDefAnalysis::perform()
          }
       return 0;
       }
+   else 
+      {
+      TR_OSRMethodData *osrMethodData = comp()->getOSRCompilationData()->findOrCreateOSRMethodData(comp()->getCurrentInlinedSiteIndex(), comp()->getMethodSymbol());
+      if (osrMethodData->hasSlotSharingOrDeadSlotsInfo())
+         {
+         if (trace())
+            {
+            traceMsg(comp(), "%s OSR reaching definition analysis is not required as it has already been calculated\n",
+               optimizer()->getMethodSymbol()->signature(comp()->trMemory()));
+            traceMsg(comp(), "Returning...\n");
+            }
+         return 0;
+         }
+      }
 
    if (trace())
       {
@@ -713,9 +727,13 @@ bool TR_OSRLiveRangeAnalysis::shouldPerformAnalysis()
       }
    else if (comp()->getOSRMode() == TR::involuntaryOSR)
       {
-      if (comp()->getOption(TR_TraceOSR))
-         traceMsg(comp(), "Should not perform OSRLiveRangeAnlysis -- involuntary OSR mode not supported\n");
-      return false;
+      static const char* disableOSRPointDeadslotsBookKeeping = feGetEnv("TR_DisableOSRPointDeadslotsBookKeeping");
+      if (comp()->getOSRMode() == TR::involuntaryOSR && (disableOSRPointDeadslotsBookKeeping || !comp()->canBookkeepDeadSlotsForOSRPoint())) // save some compile time
+         {
+         if (comp()->getOption(TR_TraceOSR))
+            traceMsg(comp(), "Should not perform OSRLiveRangeAnlysis under involuntary OSR mode in certain cases\n");
+         return false;
+         }
       }
 
    // Skip optimization if there are no OSR points
@@ -886,6 +904,8 @@ int32_t TR_OSRLiveRangeAnalysis::partialAnalysis()
 
          pendingPushLiveRangeInfo(node, ppInfo, _pendingPushSymRefs, osrPoint, osrMethodData);
          pendingPushSlotSharingInfo(node, ppInfo, _sharedSymRefs, osrPoint);
+         if (comp()->getOSRMode() == TR::involuntaryOSR)
+            buildDeadPendingPushSlotsInfo(node, ppInfo, osrPoint);
          }
       }
 
@@ -987,6 +1007,186 @@ void TR_OSRLiveRangeAnalysis::pendingPushSlotSharingInfo(TR::Node *node, TR_BitV
 
          comp()->getOSRCompilationData()->addSlotSharingInfo(osrPoint->getByteCodeInfo(),
             slot, symRefNum, symRefOrder, symRef->getSymbol()->getSize(), takesTwoSlots);
+         }
+      }
+   
+   comp()->getOSRCompilationData()->ensureSlotSharingInfoAt(osrPoint->getByteCodeInfo());
+   }
+
+void TR_OSRLiveRangeAnalysis::buildDeadPendingPushSlotsInfo(TR::Node *node, TR_BitVector *livePendingPushSymRefs, TR_OSRPoint *osrPoint)
+   {
+   TR_ByteCodeInfo& bcInfo = osrPoint->getByteCodeInfo();
+   if (trace())
+      traceMsg(comp(), "buildDeadPendingPushSlotsInfo: OSR point [%p] at %d:%d\n", node, bcInfo.getCallerIndex(), bcInfo.getByteCodeIndex());
+
+   TR_Array<List<TR::SymbolReference> > *pendingPushSymRefs = comp()->getMethodSymbol()->getPendingPushSymRefs();
+   uint32_t numOfPPSSlots = 0;
+   TR_BitVector *deadPPSSlots = NULL;
+   if (pendingPushSymRefs)
+      {
+      numOfPPSSlots = pendingPushSymRefs->size();
+      deadPPSSlots = new (trStackMemory()) TR_BitVector(numOfPPSSlots, trMemory(), stackAlloc);
+      deadPPSSlots->setAll(numOfPPSSlots);
+      }
+
+   if (livePendingPushSymRefs && !livePendingPushSymRefs->isEmpty())
+      {
+      TR_BitVectorIterator bvi(*livePendingPushSymRefs);
+      while (bvi.hasMoreElements())
+         {
+         int32_t symRefNum = bvi.getNextElement();
+         TR::SymbolReferenceTable *symRefTab = comp()->getSymRefTab();
+         TR::SymbolReference *symRef = symRefTab->getSymRef(symRefNum);
+         int32_t slot = symRef->getCPIndex();
+         TR::DataType dt = symRef->getSymbol()->getDataType();
+         bool takesTwoSlots = dt == TR::Int64 || dt == TR::Double;
+
+         List<TR::SymbolReference> *list = NULL;
+         if (trace())
+            traceMsg(comp(), "pending push slot %d is live with symref %d takesTwoSlots %d\n", slot, symRefNum, takesTwoSlots);
+
+         deadPPSSlots->reset(-slot-1);
+         if (takesTwoSlots)
+            deadPPSSlots->reset(-slot);
+         }
+      }
+
+   if (deadPPSSlots && trace())
+      {
+      TR_ByteCodeInfo& bcInfo = osrPoint->getByteCodeInfo();
+      traceMsg(comp(), "deadppslots at node %p %d:%d\n", node, bcInfo.getCallerIndex(), bcInfo.getByteCodeIndex());
+      deadPPSSlots->print(comp());
+      traceMsg(comp(), "\n");
+      }
+
+   if (deadPPSSlots && !deadPPSSlots->isEmpty())
+      {
+      TR_BitVectorIterator bvi(*deadPPSSlots);
+      while (bvi.hasMoreElements())
+         {
+         int32_t slot =  -bvi.getNextElement()-1;
+         if (trace())
+            traceMsg(comp(), "ppslot %d is dead at %d:%d\n", slot, bcInfo.getCallerIndex(), bcInfo.getByteCodeIndex());
+         comp()->getOSRCompilationData()->addSlotSharingInfo(osrPoint->getByteCodeInfo(),
+            slot, -1 /* symRefNum */, -1 /* symRefOrder */, TR::Compiler->om.sizeofReferenceAddress() /*symSize*/ , false /*takesTwoSlots*/);
+         }
+      }
+
+   comp()->getOSRCompilationData()->ensureSlotSharingInfoAt(osrPoint->getByteCodeInfo());
+   }
+
+/*
+ * Find out all the dead pending push slots and auto slots based on liveness
+ * and add slot sharing info for those slots with symRefNum = -1 and symRefOrder = -1 
+ * to indicate those slots should be zeroed in prepareForOSR
+ */
+void TR_OSRLiveRangeAnalysis::buildDeadSlotsInfo(TR::Node *node, TR_BitVector *liveVars, TR_OSRPoint *osrPoint, int32_t *liveLocalIndexToSymRefNumberMap, bool containsPendingPushes)
+   {
+
+   TR_ByteCodeInfo& bcInfo = osrPoint->getByteCodeInfo();
+   if (trace())
+      traceMsg(comp(), "buildOSRSlotSharingInfoForDeadSlots: OSR point [%p] at %d:%d\n", node, bcInfo.getCallerIndex(), bcInfo.getByteCodeIndex());
+
+   TR_Array<List<TR::SymbolReference> > *pendingPushSymRefs = NULL;
+   uint32_t numOfPPSSlots = 0;
+   TR_BitVector *deadPPSSlots = NULL;
+   if (containsPendingPushes)
+      {
+      pendingPushSymRefs = comp()->getMethodSymbol()->getPendingPushSymRefs();
+      if (pendingPushSymRefs)
+         {
+         numOfPPSSlots = pendingPushSymRefs->size();
+         deadPPSSlots = new (trStackMemory()) TR_BitVector(numOfPPSSlots, trMemory(), stackAlloc);
+         deadPPSSlots->setAll(numOfPPSSlots);
+         }
+      }
+
+   uint32_t numOfAutoSlots = 0;
+   TR_BitVector *deadAutoSlots = NULL;
+   numOfAutoSlots = comp()->getMethodSymbol()->getFirstJitTempIndex();
+   if (numOfAutoSlots > 0)
+      {
+      deadAutoSlots = new (trStackMemory()) TR_BitVector(numOfAutoSlots, trMemory(), stackAlloc);
+      deadAutoSlots->setAll(numOfAutoSlots);
+      }
+
+   if (!liveVars->isEmpty())
+      {
+      TR::SymbolReferenceTable *symRefTab = comp()->getSymRefTab();
+      TR_ByteCodeInfo& bcInfo = osrPoint->getByteCodeInfo();
+
+      TR_BitVectorIterator bvi(*_liveVars);
+      while (bvi.hasMoreElements())
+         {
+         int32_t index = bvi.getNextElement();
+         int32_t symRefNum = liveLocalIndexToSymRefNumberMap[index];
+         if (symRefNum < 0)
+            continue;
+
+         TR::SymbolReference *symRef = symRefTab->getSymRef(symRefNum);
+         int32_t slot = symRef->getCPIndex();
+         TR::DataType dt = symRef->getSymbol()->getDataType();
+         bool takesTwoSlots = dt == TR::Int64 || dt == TR::Double;
+
+         List<TR::SymbolReference> *list = NULL;
+         if (trace())
+            {
+            traceMsg(comp(), "slot %d is live with symref %d takesTwoSlots %d\n", slot, symRefNum, takesTwoSlots);
+            }
+
+         if (slot < 0)
+            {
+            deadPPSSlots->reset(-slot-1);
+            if (takesTwoSlots)
+               deadPPSSlots->reset(-slot);
+            }
+         else
+            {
+            deadAutoSlots->reset(slot);
+            if (takesTwoSlots)
+               deadAutoSlots->reset(slot+1);
+            }
+         }
+      }
+
+   if (deadPPSSlots && trace())
+      {
+      TR_ByteCodeInfo& bcInfo = osrPoint->getByteCodeInfo();
+      traceMsg(comp(), "deadppslots at node %p %d:%d\n", node, bcInfo.getCallerIndex(), bcInfo.getByteCodeIndex());
+      deadPPSSlots->print(comp());
+      traceMsg(comp(), "\n");
+      }
+
+   if (deadPPSSlots && !deadPPSSlots->isEmpty())
+      {
+      TR_BitVectorIterator bvi(*deadPPSSlots);
+      while (bvi.hasMoreElements())
+         {
+         int32_t slot =  -bvi.getNextElement()-1;
+         TR_ByteCodeInfo& bcInfo = osrPoint->getByteCodeInfo();
+         if (trace())
+            traceMsg(comp(), "ppslot %d is dead at %d:%d\n", slot, bcInfo.getCallerIndex(), bcInfo.getByteCodeIndex());
+         comp()->getOSRCompilationData()->addSlotSharingInfo(osrPoint->getByteCodeInfo(),
+            slot, -1 /* symRefNum */, -1 /* symRefOrder */, TR::Compiler->om.sizeofReferenceAddress() /*symSize*/ , false /*takesTwoSlots*/);
+         }
+      }
+
+   if (deadAutoSlots && trace())
+      { 
+      TR_ByteCodeInfo& bcInfo = osrPoint->getByteCodeInfo();
+      traceMsg(comp(), "deadAutoSlots at node %p %d:%d\n", node, bcInfo.getCallerIndex(), bcInfo.getByteCodeIndex());
+      deadAutoSlots->print(comp());
+      traceMsg(comp(), "\n");
+      }
+
+   if (deadAutoSlots && !deadAutoSlots->isEmpty())
+      {
+      TR_BitVectorIterator bvi(*deadAutoSlots);
+      while (bvi.hasMoreElements())
+         {
+         int32_t slot =  bvi.getNextElement();
+         comp()->getOSRCompilationData()->addSlotSharingInfo(osrPoint->getByteCodeInfo(),
+            slot, -1 /* symRefNum */, -1 /* symRefOrder */, TR::Compiler->om.sizeofReferenceAddress() /*symSize*/ , false /*takesTwoSlots*/);
          }
       }
 
@@ -1204,7 +1404,8 @@ int32_t TR_OSRLiveRangeAnalysis::fullAnalysis(bool includeParms, bool containsPe
          if (isPotentialOSRPoint && (comp()->isOSRTransitionTarget(TR::preExecutionOSR) ||
              comp()->requiresAnalysisOSRPoint(node)))
             {
-            TR_OSRPoint *osrPoint = comp()->getMethodSymbol()->findOSRPoint(bci);
+            TR_ByteCodeInfo bcInfo = node->getByteCodeInfo();
+            TR_OSRPoint *osrPoint = comp()->getMethodSymbol()->findOSRPoint(bcInfo);
             TR_ASSERT(osrPoint != NULL, "Cannot find a pre OSR point for node %p", node);
 
             buildOSRLiveRangeInfo(node, _liveVars, osrPoint, liveLocalIndexToSymRefNumberMap,
@@ -1212,6 +1413,8 @@ int32_t TR_OSRLiveRangeAnalysis::fullAnalysis(bool includeParms, bool containsPe
             if (!_sharedSymRefs->isEmpty())
                buildOSRSlotSharingInfo(node, _liveVars, osrPoint, liveLocalIndexToSymRefNumberMap,
                   _sharedSymRefs);
+            if (comp()->getOSRMode() == TR::involuntaryOSR)
+               buildDeadSlotsInfo(node, _liveVars, osrPoint, liveLocalIndexToSymRefNumberMap, containsPendingPushes);
             }
          }
 

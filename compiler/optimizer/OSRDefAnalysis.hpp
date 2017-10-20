@@ -94,6 +94,10 @@ class TR_OSRLiveRangeAnalysis : public TR::Optimization
    void buildOSRSlotSharingInfo(TR::Node *node, TR_BitVector *liveVars, TR_OSRPoint *osrPoint,
       int32_t *liveLocalIndexToSymRefNumberMap, TR_BitVector *slotSharingVars);
 
+   void buildDeadSlotsInfo(TR::Node *node, TR_BitVector *liveVars, TR_OSRPoint *osrPoint,
+      int32_t *liveLocalIndexToSymRefNumberMap, bool containsPendingPush);
+
+   void buildDeadPendingPushSlotsInfo(TR::Node *node, TR_BitVector *livePendingPushSymRefs, TR_OSRPoint *osrPoint);
    void pendingPushLiveRangeInfo(TR::Node *node, TR_BitVector *liveSymRefs,
       TR_BitVector *allPendingPushSymRefs, TR_OSRPoint *osrPoint, TR_OSRMethodData *osrMethodData);
    void pendingPushSlotSharingInfo(TR::Node *node, TR_BitVector *liveSymRefs,

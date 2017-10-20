@@ -927,6 +927,9 @@ public:
    int64_t getCpuTimeSpentInCompilation(); // coarse value (~0.5 sec granularity). Result in ns
    TR_YesNoMaybe isCpuExpensiveCompilation(int64_t threshold); // threshold in ns
 
+   bool canBookkeepDeadSlotsForOSRPoint(){ return _canBookkeepDeadSlotsForOSRPoint; }
+   void setCanBookeepDeadSlotsForOSRPoint(bool v){ _canBookkeepDeadSlotsForOSRPoint = v; }
+
    // set a 32 bit field that will be printed if the VM crashes
    // typically, this should be used to represent the state of the
    // compilation
@@ -1110,6 +1113,7 @@ private:
    bool                              _osrStateIsReliable;
    bool                              _canAffordOSRControlFlow;
    bool                              _osrInfrastructureRemoved;
+   bool                              _canBookkeepDeadSlotsForOSRPoint;
 
    TR_Hotness                        _nextOptLevel;
    int32_t                           _errorCode;

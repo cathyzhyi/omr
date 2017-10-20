@@ -2271,6 +2271,12 @@ OMR::ResolvedMethodSymbol::detectInternalCycles(TR::CFG *cfg, TR::Compilation *c
                      gotoBlock->setIsCold();
                      clonedCatch->setFrequency(CATCH_COLD_BLOCK_COUNT);
                      gotoBlock->setFrequency(CATCH_COLD_BLOCK_COUNT);
+
+                     //OSRLiveRangeAnalysis can not handle this case where two OSR points
+                     //(the original catch event and the inserted asyncCHK with infinite loop) 
+                     //have the same bci but different liveness
+                     if (comp->getOSRMode() == TR::involuntaryOSR)
+                        comp->setCanBookeepDeadSlotsForOSRPoint(false);
                      break;
                      }
                   }

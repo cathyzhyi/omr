@@ -779,6 +779,12 @@ TR_OSRMethodData::getArgInfo(int32_t byteCodeIndex)
    return args;
    }
 
+bool
+TR_OSRMethodData::hasSlotSharingOrDeadSlotsInfo()
+   {
+   return !bcInfoHashTab.IsEmpty();
+   }
+
 /*
  * Add pending push live range info for a BCI.
  *
@@ -878,7 +884,10 @@ TR_OSRMethodData::addInstruction(int32_t instructionPC, int32_t byteCodeIndex)
          {
          int32_t scratchBufferOffset;
          bool found = slot2ScratchBufferOffset.Locate(slotInfos[i].slot, hashIndex);
-         TR_ASSERT(found, "slot %d symref #%d must be in slot2ScratchBufferOffset hash table\n",
+         //slotInfos[i].symRefOrder == -1 means the slot would be zeroed out at this OSR point
+         //scratchBufferOffset is not needed in such case because we don't need to copy a variable
+         //value from the scratch buffer.
+         TR_ASSERT(found || slotInfos[i].symRefOrder == -1, "slot %d symref #%d must be in slot2ScratchBufferOffset hash table\n",
                  slotInfos[i].slot, slotInfos[i].symRefNum);
          if (slotInfos[i].symRefOrder == -1)
             {
@@ -1020,6 +1029,7 @@ TR_OSRSlotSharingInfo::addSlotInfo(int32_t slot, int32_t symRefNum, int32_t symR
             found = true;
             }
          }
+
       //check if the two syms overlap, if they do we will write zero in that stack slot. That's because
       //two shared symbols cannot be live at the same OSR point and we write the value zero because
       //it's a valid value for both reference and non-reference types.
@@ -1031,7 +1041,8 @@ TR_OSRSlotSharingInfo::addSlotInfo(int32_t slot, int32_t symRefNum, int32_t symR
          int32_t endSlot2 = startSlot2 + (info.takesTwoSlots ? 2 : 1) - 1;
          if ((startSlot1 <= endSlot2) && (startSlot2 <= endSlot1))
             {
-            //if (trace) traceMsg(comp, "symbols %d and %d overlap\n", symRefNum, info.symRefNum);
+            if (trace) 
+               traceMsg(comp, "addSlotInfo: symbols #%d and #%d overlap zeroing out slot %d\n", symRefNum, info.symRefNum, slot);
             // don't add any more symbols to the list
             found = true;
             //mark the symbol

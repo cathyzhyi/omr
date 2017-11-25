@@ -584,7 +584,6 @@ bool OMR::Compilation::supportsInduceOSR()
       {
       if (self()->getOption(TR_TraceOSR))
          traceMsg(self(), "MimicInterpreterFrameShape is set - OSR induction is not supported\n");
-      return false;
       }
 
    if (self()->isDLT() /* && getJittedMethodSymbol()->sharesStackSlots(self()) */)

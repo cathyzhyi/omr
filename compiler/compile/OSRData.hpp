@@ -219,7 +219,7 @@ class TR_OSRCompilationData
    int32_t getNumOfSymsThatShareSlot() {return numOfSymsThatShareSlot;}
    void updateNumOfSymsThatShareSlot(int32_t value) {numOfSymsThatShareSlot += value;}
    void buildSymRefOrderMap();
-      
+
    int32_t getSymRefOrder(int32_t symRefNumber);
    TR_OSRSlotSharingInfo* getSlotsInfo(const TR_ByteCodeInfo &bcInfo);
 
@@ -316,6 +316,7 @@ class TR_OSRMethodData
    TR::Block * findOrCreateOSRCatchBlock(TR::Node* n);
    TR::Block *getOSRCodeBlock() const { return osrCodeBlock; }
    TR::Block *getOSRCatchBlock() const {return osrCatchBlock;}
+   bool osrBlocksAreRemoved(); 
    bool inlinesAnyMethod() const;
    void setNumOfSymsThatShareSlot(int32_t newValue);
    int32_t getNumOfSymsThatShareSlot() {return numOfSymsThatShareSlot;}

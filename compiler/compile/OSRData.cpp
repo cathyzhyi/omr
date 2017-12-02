@@ -545,7 +545,6 @@ static void printMap(DefiningMap *map, TR::Compilation *comp)
  * Combining the FinalMap with liveness info from OSRLiveRangeAnalysis, we are able to find which 
  * symbols should be kept alive at each osrPoints.
  */
-
 void TR_OSRCompilationData::buildDefiningMap()
    {
    const TR_Array<TR_OSRMethodData *>& methodDataArray = getOSRMethodDataArray();

@@ -793,10 +793,12 @@ int32_t TR_OSRLiveRangeAnalysis::perform()
          else if (symRef->getCPIndex() < methodSymbol->getFirstJitTempIndex())
             {
             containsAuto = true;
-            osrMethodData->getSymRefs()->set(symRef->getReferenceNumber());
             if (methodSymbol->sharesStackSlot(symRef))
                _sharedSymRefs->set(symRef->getReferenceNumber());
             }
+
+         if (comp()->getOSRMode() == TR::involuntaryOSR && osrMethodData->getSymRefs())
+            osrMethodData->getSymRefs()->set(symRef->getReferenceNumber());
          }
       }
 

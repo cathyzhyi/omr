@@ -143,6 +143,7 @@ class TR_LoopUnroller
    int32_t unroll(TR_RegionStructure *loop, TR_StructureSubGraphNode *branchNode);
    void unrollLoopOnce(TR_RegionStructure *loop, TR_StructureSubGraphNode *branchNode, bool finalUnroll);
    bool shouldConnectToNextIteration(TR_StructureSubGraphNode *subNode, TR_RegionStructure *loop);
+   void removeAsynChks();
 
    void generateSpillLoop(TR_RegionStructure*, TR_StructureSubGraphNode*);
    void modifyOriginalLoop(TR_RegionStructure*, TR_StructureSubGraphNode*);

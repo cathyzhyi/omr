@@ -223,6 +223,35 @@ bool TR_LoopUnroller::shouldConnectToNextIteration(TR_StructureSubGraphNode *sub
    return _unrollKind == CompleteUnroll || isCountedLoop() || checkNodeFrequency(subNode, loop);
    }
 
+void TR_LoopUnroller::removeAsynChks()
+   {
+   TR::TreeTop *stopTreeTop = _startPosOfUnrolledBodies;
+
+   for (TR::TreeTop *treeTop = comp()->getStartTree(); treeTop; treeTop = treeTop->getNextTreeTop())
+      {
+      TR::Block *block = treeTop->getNode()->getBlock();
+      if (block->getNumber() < _numNodes)
+         {
+         TR::Block *clonedBlock = GET_CLONE_BLOCK(block);
+         if (clonedBlock &&
+             clonedBlock->getFirstRealTreeTop()->getNode()->getOpCodeValue() == TR::asynccheck)
+            {
+            TR::TreeTop *treeTop = clonedBlock->getFirstRealTreeTop();
+            TR::TreeTop *prev = treeTop->getPrevTreeTop();
+            optimizer()->prepareForTreeRemoval(treeTop);
+            TR::TransformUtil::removeTree(comp(), treeTop);
+            treeTop = prev;
+            if (trace())
+               traceMsg(comp(), "remove redundant asynccheck from block_%d\n", clonedBlock->getNumber());
+            }
+         }
+
+      treeTop = treeTop->getNode()->getBlock()->getExit();
+      if (treeTop == stopTreeTop)
+         break;
+      }
+   }
+
 void TR_LoopUnroller::unrollLoopOnce(TR_RegionStructure *loop, TR_StructureSubGraphNode *branchNode,
                                      bool finalUnroll)
    {
@@ -234,6 +263,8 @@ void TR_LoopUnroller::unrollLoopOnce(TR_RegionStructure *loop, TR_StructureSubGr
 
    //First, clone all the original blocks in the loop
    cloneBlocksInRegion(loop);
+   if (_spillLoopRequired || _iteration > 1)
+      removeAsynChks();
 
    //Create duplicates of all sub structures in the loop
    TR_RegionStructure::Cursor nodeIt(*loop);

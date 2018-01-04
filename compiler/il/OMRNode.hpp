@@ -161,6 +161,9 @@ public:
    void * operator new(size_t s, TR::NodePool & nodePool);
    void * operator new(size_t s, void *ptr) throw();
 
+   bool isActiveProfile();
+   void setIsActiveProfile();
+
    static TR::Node *copy(TR::Node *);
    static TR::Node *copy(TR::Node *, int32_t numChildren);
 
@@ -1885,6 +1888,8 @@ protected:
       swappedChildren                       = 0x00020000,
       versionIfWithMaxExpr                  = 0x00010000,
       versionIfWithMinExpr                  = 0x00040000,
+
+      activeProfile = 0x00080000,
 
       // Can be set on int loads and arithmetic operations
       IsPowerOfTwo                          = 0x10000000,

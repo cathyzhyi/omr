@@ -1796,7 +1796,22 @@ TR::Register *OMR::X86::TreeEvaluator::unsignedIntegerIfCmpleEvaluator(TR::Node 
 // also handles ifbcmpne, ifbucmpeq, ifbucmpne
 TR::Register *OMR::X86::TreeEvaluator::ifbcmpeqEvaluator(TR::Node *node, TR::CodeGenerator *cg)
    {
-
+   if (node->isActiveProfile())
+      {
+      if (node->isActiveProfile() && node->getOpCodeValue() == TR::ifbcmpeq)
+         {
+         TR::Node *load = node->getFirstChild();
+         TR::Node *bconst = node->getSecondChild();
+         if (bconst->getOpCode().isLoadConst() && load->getOpCodeValue() == TR::bloadi)
+            {
+            TR::Instruction *instr = generateConditionalJumpInstruction(JMP4, node, cg, true);
+            TR_PersistentProfileInfo::getCurrent(cg->comp())->addPatchPoint(cg->comp(), instr);
+            TR::DebugCounter::incStaticDebugCounter(cg->comp(), TR::DebugCounter::debugCounterName(cg->comp(), "jprofiling.patch/got"));
+            return NULL;
+            }
+         }
+      TR::DebugCounter::incStaticDebugCounter(cg->comp(), TR::DebugCounter::debugCounterName(cg->comp(), "jprofiling.patch/missed")); 
+      }
 
    TR::Node *secondChild = node->getSecondChild();
    bool reverseBranch = false;

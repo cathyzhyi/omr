@@ -1099,6 +1099,8 @@ int32_t OMR::Compilation::compile()
            codegenTime.startTiming(self());
 
         self()->cg()->generateCode();
+         if (TR_PersistentProfileInfo::getCurrent(self()))
+            TR_PersistentProfileInfo::getCurrent(self())->extractPatchPoints(self());
 
         if (printCodegenTime)
            codegenTime.stopTiming(self());

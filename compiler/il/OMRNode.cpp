@@ -7678,6 +7678,17 @@ OMR::Node::setIsVersionableIfWithMinExpr(TR::Compilation * c)
    }
 
 
+bool
+OMR::Node::isActiveProfile()
+   {
+   return _flags.testAny(activeProfile) && self()->getOpCode().isIf();
+   }
+
+void
+OMR::Node::setIsActiveProfile()
+   {
+   _flags.set(activeProfile);
+   }
 
 bool
 OMR::Node::isStoreAlreadyEvaluated()

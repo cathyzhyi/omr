@@ -112,6 +112,7 @@ class TR_OSRLiveRangeAnalysis : public TR::Optimization
    TR_BitVector *_pendingPushSymRefs;
    TR_BitVector *_sharedSymRefs;
    TR_BitVector *_workBitVector;
+   TR_BitVector *_workDeadSymRefs;
    TR_BitVector *_visitedBCI;    
    };
 

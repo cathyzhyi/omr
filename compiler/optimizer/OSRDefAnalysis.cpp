@@ -702,6 +702,7 @@ TR_OSRLiveRangeAnalysis::TR_OSRLiveRangeAnalysis(TR::OptimizationManager *manage
      _pendingPushSymRefs(NULL),
      _sharedSymRefs(NULL),
      _workBitVector(NULL),
+     _workDeadSymRefs(NULL),
      _visitedBCI(NULL)
    {}
 
@@ -761,6 +762,7 @@ int32_t TR_OSRLiveRangeAnalysis::perform()
    _pendingPushSymRefs = new (trStackMemory()) TR_BitVector(0, trMemory(), stackAlloc);
    _sharedSymRefs = new (trStackMemory()) TR_BitVector(0, trMemory(), stackAlloc);
    _workBitVector = new (trStackMemory()) TR_BitVector(0, trMemory(), stackAlloc);
+   _workDeadSymRefs = new (trStackMemory()) TR_BitVector(0, trMemory(), stackAlloc);
    _visitedBCI = new (trStackMemory()) TR_BitVector(0, trMemory(), stackAlloc);
 
    bool containsAuto = false, sharesParm = false, containsPendingPush = false;
@@ -1753,8 +1755,9 @@ void TR_OSRLiveRangeAnalysis::buildOSRLiveRangeInfo(TR::Node *node, TR_BitVector
    _workBitVector->setAll(numBits);
    *_workBitVector -= *liveVars;
 
+
+   _workDeadSymRefs->empty();
    TR_BitVector *deadSymRefs = NULL;
-   TR_BitVector deadSymRefsTemp(0, comp()->trMemory()->currentStackRegion());
 
    if (!_workBitVector->isEmpty())
       {
@@ -1763,27 +1766,32 @@ void TR_OSRLiveRangeAnalysis::buildOSRLiveRangeInfo(TR::Node *node, TR_BitVector
          {
          int32_t nextDeadVar = bvi.getNextElement();
          if (liveLocalIndexToSymRefNumberMap[nextDeadVar] >= 0)
-            deadSymRefsTemp.set(liveLocalIndexToSymRefNumberMap[nextDeadVar]);
+            _workDeadSymRefs->set(liveLocalIndexToSymRefNumberMap[nextDeadVar]);
          }
 
       // Load the existing BitVector
       deadSymRefs = osrMethodData->getLiveRangeInfo(byteCodeIndex);
-      if (!deadSymRefs)
-         {
-         deadSymRefs = new (trHeapMemory()) TR_BitVector(0, trMemory(), heapAlloc);
-         newlyAllocated = true;
-         }
 
       //There are cases where one bci has several OSRPoints with different liveness. 
       //A symbol is only dead if it's dead at all the OSRPoints
       if (_visitedBCI->isSet(byteCodeIndex))
          {
          if (!containsPendingPushes)
-            deadSymRefsTemp |= *_pendingPushSymRefs; 
-         *deadSymRefs &= deadSymRefsTemp;
+            *_workDeadSymRefs |= *_pendingPushSymRefs; 
+         if (deadSymRefs)
+            *deadSymRefs &= *_workDeadSymRefs;
          }
       else
-         *deadSymRefs |= deadSymRefsTemp; 
+         {
+         if (!deadSymRefs && !_workDeadSymRefs->isEmpty())
+            {
+            deadSymRefs = new (trHeapMemory()) TR_BitVector(0, trMemory(), heapAlloc);
+            newlyAllocated = true;
+            }
+
+         if (deadSymRefs)
+            *deadSymRefs |= *_workDeadSymRefs; 
+         }
 
       if (newlyAllocated && !deadSymRefs->isEmpty())
          osrMethodData->addLiveRangeInfo(byteCodeIndex, deadSymRefs);

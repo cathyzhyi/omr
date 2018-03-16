@@ -260,21 +260,13 @@ public:
 #elif defined(_MSC_VER)
 		_ReadBarrier();
 #elif defined(__GNUC__)
-#if defined(J9X86)
-		asm volatile("lock orl $0x0,(%%esp)" ::: "memory");
-		/* TODO investigate whether or not we should call this instead
+#if defined(OMR_ARCH_X86)
 		asm volatile("lfence":::"memory");
-		*/
-#elif defined(J9HAMMER)
-		asm volatile("lock orq $0x0,(%%rsp)" ::: "memory");
-		/* TODO investigate whether or not we should call this instead
-		asm volatile("lfence":::"memory");
-		*/
-#elif defined(ARM) /* defined(J9HAMMER) */
+#elif defined(ARM)
 		__sync_synchronize();
 #else /* defined(ARM) */
 		asm volatile("":::"memory");
-#endif /* defined(J9X86) || defined(J9HAMMER) */
+#endif /* defined(OMR_ARCH_X86) */
 #elif defined(J9ZOS390)
 		__fence();
 #endif /* defined(AIXPPC) || defined(LINUXPPC) */
@@ -478,11 +470,20 @@ public:
 		/* Stop compiler optimizing away load of oldValue */
 		volatile uintptr_t *localAddr = address;
 		uintptr_t oldValue;
-
+#if defined(__GNUC__)
+      oldValue = __sync_fetch_and_and(localAddr, mask);
+#elif defined(_MSC_VER)
+#if defined(OMR_ENV_DATA64)
+      oldValue = _InterlockedAnd64((volatile __int64 * )localAddr, (__int64) mask);
+#else
+      oldValue = _InterlockedAnd((volatile long *)localAddr, (long) mask);
+#endif // OMR_ENV_DATA64
+#else
 		oldValue = (uintptr_t)*localAddr;
 		while ((lockCompareExchange(localAddr, oldValue, oldValue & mask)) != oldValue) {
 			oldValue = (uintptr_t)*localAddr;
 		}
+#endif // __GNUC__
 		return oldValue;
 	}
 
@@ -503,10 +504,15 @@ public:
 		volatile uint32_t *localAddr = address;
 		uint32_t oldValue;
 
-		oldValue = (uint32_t)*localAddr;
+#if defined(__GNUC__)
+      oldValue = __sync_fetch_and_and(localAddr, mask);
+#elif defined (_MSC_VER)
+      oldValue = _InterlockedAnd((volatile long* ) localAddr, (long) mask) ;
+#else
 		while ((lockCompareExchangeU32(localAddr, oldValue, oldValue & mask)) != oldValue) {
 			oldValue = (uint32_t)*localAddr;
 		}
+#endif // __GNUC__
 		return oldValue;
 	}
 
@@ -526,11 +532,20 @@ public:
 		/* Stop compiler optimizing away load of oldValue */
 		volatile uintptr_t *localAddr = address;
 		uintptr_t oldValue;
-
+#if defined(__GNUC__)
+      oldValue = __sync_fetch_and_or(localAddr, mask);
+#if defined(_MSC_VER)
+#if defined(OMR_ENV_DATA64)
+      oldValue = _InterlockedOr64((volatile __int64 *) localAddr, (__int64) mask);
+#else 
+      oldValue = _InterlockedOr((volatile long*) localAddr, (long) mask);
+#endif // OMR_ENV_DATA64
+#else
 		oldValue = (uintptr_t)*localAddr;
 		while ((lockCompareExchange(localAddr, oldValue, oldValue | mask)) != oldValue) {
 			oldValue = (uintptr_t)*localAddr;
 		}
+#endif // __GNUC__
 		return oldValue;
 	}
 
@@ -551,10 +566,16 @@ public:
 		volatile uint32_t *localAddr = address;
 		uint32_t oldValue;
 
+#if defined(__GNUC__)
+      oldValue = __sync_fetch_and_add(localAddr, addend);
+#elif defined(_MSC_VER)
+      oldValue = _InterlockedAdd((volatile long*) localAddr, (long) addend);
+#else
 		oldValue = (uint32_t)*localAddr;
 		while ((lockCompareExchangeU32(localAddr, oldValue, oldValue + addend)) != oldValue) {
 			oldValue = (uint32_t)*localAddr;
 		}
+#endif // __GNUC__
 		return oldValue + addend;
 	}
 
@@ -574,11 +595,16 @@ public:
 		/* Stop compiler optimizing away load of oldValue */
 		volatile uint64_t *localAddr = address;
 		uint64_t oldValue;
-
+#if defined(__GNUC__)
+      oldValue = __sync_fetch_and_add(localAddr, addend);
+#elif defined(_MSC_VER)
+      oldValue = _InterlockedAdd64((volatile __int64 *) localAddr, (__int64) mask);
+#else
 		oldValue = (uint64_t)*localAddr;
 		while ((lockCompareExchangeU64(localAddr, oldValue, oldValue + addend)) != oldValue) {
 			oldValue = (uint64_t)*localAddr;
 		}
+#endif // __GNUC__
 		return oldValue + addend;
 	}
 
@@ -602,10 +628,14 @@ public:
 		double oldValue = *address;
 		double newValue =  oldValue + addend;
 
+#if defined(__GNUC__)
+      oldValue = __sync_fetch_and_add(localAddr, addend);
+#else
 		while (lockCompareExchangeU64(localAddr, *(uint64_t *)&oldValue, *(uint64_t *)&newValue) != *(uint64_t *)&oldValue) {
 			oldValue = *address;
 			newValue =  oldValue + addend;
 		}
+#endif
 		return newValue;
 	}
 
@@ -625,11 +655,14 @@ public:
 		/* Stop compiler optimizing away load of oldValue */
 		volatile uintptr_t *localAddr = address;
 		uintptr_t oldValue;
-
+#if defined(__GNUC__)
+      oldValue = __sync_fetch_and_sub(localAddr, value);
+#else
 		oldValue = (uintptr_t)*localAddr;
 		while ((lockCompareExchange(localAddr, oldValue, oldValue - value)) != oldValue) {
 			oldValue = (uintptr_t)*localAddr;
 		}
+#endif
 		return oldValue - value;
 	}
 
@@ -650,10 +683,14 @@ public:
 		volatile uint64_t *localAddr = address;
 		uint64_t oldValue;
 
+#if defined(__GNUC__)
+      oldValue = __sync_fetch_and_sub(localAddr, value);
+#else
 		oldValue = (uint64_t)*localAddr;
 		while ((lockCompareExchangeU64(localAddr, oldValue, oldValue - value)) != oldValue) {
 			oldValue = (uint64_t)*localAddr;
 		}
+#endif
 		return oldValue - value;
 	}
 
@@ -673,11 +710,14 @@ public:
 		/* Stop compiler optimizing away load of oldValue */
 		volatile uint32_t *localAddr = address;
 		uint32_t oldValue;
-
+#if defined(__GNUC__)
+      oldValue = __sync_fetch_and_sub(localAddr, value);
+#else
 		oldValue = (uint32_t)*localAddr;
 		while ((lockCompareExchangeU32(localAddr, oldValue, oldValue - value)) != oldValue) {
 			oldValue = (uint32_t)*localAddr;
 		}
+#endif
 		return oldValue - value;
 	}
 

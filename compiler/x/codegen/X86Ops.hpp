@@ -118,6 +118,8 @@ inline TR_X86OpCodes SizeParameterizedOpCode(bool is64Bit =
 #define ORRegImm4      SizeParameterizedOpCode<OR8RegImm4      , OR4RegImm4      >
 #define ORRegImms      SizeParameterizedOpCode<OR8RegImms      , OR4RegImms      >
 #define ORRegMem       SizeParameterizedOpCode<OR8RegMem       , OR4RegMem       >
+#define ORMemReg       SizeParameterizedOpCode<OR8MemReg       , OR4MemReg       >
+#define LORMemReg      SizeParameterizedOpCode<LOR8MemReg      , LOR4MemReg      >
 #define XORRegMem      SizeParameterizedOpCode<XOR8RegMem      , XOR4RegMem      >
 #define XORRegImms     SizeParameterizedOpCode<XOR8RegImms     , XOR4RegImms     >
 #define XORRegImm4     SizeParameterizedOpCode<XOR8RegImm4     , XOR4RegImm4     >
@@ -125,6 +127,8 @@ inline TR_X86OpCodes SizeParameterizedOpCode(bool is64Bit =
 #define ANDRegImm4     SizeParameterizedOpCode<AND8RegImm4     , AND4RegImm4     >
 #define ANDRegReg      SizeParameterizedOpCode<AND8RegReg      , AND4RegReg      >
 #define ANDRegImms     SizeParameterizedOpCode<AND8RegImms     , AND4RegImms     >
+#define ANDMemReg      SizeParameterizedOpCode<AND8MemReg      , AND4MemReg      >
+#define LANDMemReg     SizeParameterizedOpCode<LAND8MemReg     , LAND4MemReg     >
 #define ORRegReg       SizeParameterizedOpCode<OR8RegReg       , OR4RegReg       >
 #define MOVRegImm4     SizeParameterizedOpCode<MOV8RegImm4     , MOV4RegImm4     >
 #define IMULAccReg     SizeParameterizedOpCode<IMUL8AccReg     , IMUL4AccReg     >

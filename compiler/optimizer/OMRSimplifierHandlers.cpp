@@ -6121,6 +6121,15 @@ TR::Node *iaddSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
       return node;
       }
 
+   if (node->getOpCode().isRef() &&
+       firstChild->getOpCode().isLoadConst() && firstChild->getAddress() == 0) 
+      {
+      TR::Node *newSecondChild = TR::Node::create(secondChild, TR::i2a, 1);
+      newSecondChild->setAndIncChild(0, secondChild);
+      s->generateAnchor(newSecondChild, s->_curTree);
+      return s->replaceNode(node, newSecondChild, s->_curTree);
+      }
+
    BINARY_IDENTITY_OP(Int, 0)
    TR::ILOpCodes firstChildOp  = firstChild->getOpCodeValue();
    TR::ILOpCodes secondChildOp = secondChild->getOpCodeValue();
@@ -6526,7 +6535,17 @@ TR::Node *laddSimplifier(TR::Node * node, TR::Block * block, TR::Simplifier * s)
       return node;
       }
 
+   if (node->getOpCode().isArrayRef() && 
+       firstChild->getOpCode().isLoadConst() && firstChild->getAddress() == 0) 
+      {
+      TR::Node *newSecondChild = TR::Node::create(secondChild, TR::l2a, 1);
+      newSecondChild->setAndIncChild(0, secondChild);
+      s->generateAnchor(newSecondChild, s->_curTree);
+      return s->replaceNode(node, newSecondChild, s->_curTree);
+      }
+
    BINARY_IDENTITY_OP(LongInt, 0L)
+
    TR::ILOpCodes firstChildOp  = firstChild->getOpCodeValue();
    TR::ILOpCodes secondChildOp = secondChild->getOpCodeValue();
    // normalize adds of positive constants to be isubs.  Have to do it this way because

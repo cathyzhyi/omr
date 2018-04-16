@@ -65,8 +65,9 @@ struct TR_ExtraInfoForNew
    {
    TR_ALLOC(TR_Memory::ExtraInfoForNew)
 
-   TR_BitVector *zeroInitSlots;
-   int32_t       numZeroInitSlots;
+   TR_BitVector *zeroInitSlots; // NULL value means all slots can skip zero init
+   int32_t       totalSlots;
+   int32_t       numZeroInitSlots(){ return zeroInitSlots == NULL ? 0: zeroInitSlots->elementCount(); }
    };
 
 namespace OMR

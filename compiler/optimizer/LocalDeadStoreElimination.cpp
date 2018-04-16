@@ -953,8 +953,7 @@ void TR::LocalDeadStoreElimination::eliminateDeadObjectInitializations()
           TR_ExtraInfoForNew *initInfo = symRef->getExtraInfo();
           if (initInfo)
              {
-             if (initInfo->zeroInitSlots ||
-                 (initInfo->numZeroInitSlots > 0))
+             if (initInfo->zeroInitSlots)
                 {
                 int32_t offset = -1;
                 if (storeNode->getFirstChild()->getOpCode().isArrayRef())
@@ -982,12 +981,10 @@ void TR::LocalDeadStoreElimination::eliminateDeadObjectInitializations()
                        !initInfo->zeroInitSlots->get(offset/4))
                       {
                       initInfo->zeroInitSlots->set(offset/4);
-                      initInfo->numZeroInitSlots++;
 
                       if (storeNode->getOpCode().getSize() > 4)
                          {
                          initInfo->zeroInitSlots->set((offset/4)+1);
-                         initInfo->numZeroInitSlots++;
                          }
                       }
                    }

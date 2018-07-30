@@ -919,15 +919,7 @@ int32_t OMR::Compilation::compile()
    bool printCodegenTime = self()->getOption(TR_CummTiming);
 
    if (self()->isOptServer())
-      {
-      // Temporarily exclude PPC due to perf regression
-      if( (self()->getMethodHotness() <= warm))
-         {
-         if (!TR::Compiler->target.cpu.isPower())
-            self()->getOptions()->setOption(TR_DisableInternalPointers);
-         }
       self()->getOptions()->setOption(TR_DisablePartialInlining);
-      }
 
 #ifdef J9_PROJECT_SPECIFIC
    if (self()->getOptions()->getDelayCompile())

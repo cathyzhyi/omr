@@ -230,6 +230,11 @@ int32_t TR_PartialRedundancy::perform()
    if (comp()->getProfilingMode() == JitProfiling && comp()->getHCRMode() != TR::none && _numProfilingsAllowed == 0)
       return 0;
 
+   // TODO: need to investigate places calling opCodeFor* APIs are doing the right
+   // thing fore readbar and wrtbar
+   if (comp()->mayContainReadbarOrWritebar())
+      return 0;
+
    TR::StackMemoryRegion stackMemoryRegion(*trMemory());
 
    // setAlteredCode(false);

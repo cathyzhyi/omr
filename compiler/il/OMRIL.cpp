@@ -600,13 +600,13 @@ OMR::IL::opCodeForCorrespondingIndirectLoad(TR::ILOpCodes loadOpCode)
       case TR::iuload: return TR::iustore;
       case TR::iuloadi: return TR::iustorei;
       case TR::luloadi: return TR::lustorei;
-      case TR::brdbari: return TR::bwrtbari;
-      case TR::srdbari: return TR::swrtbari;
-      case TR::irdbari: return TR::iwrtbari;
-      case TR::lrdbari: return TR::lwrtbari;
-      case TR::frdbari: return TR::fwrtbari;
-      case TR::drdbari: return TR::dwrtbari;
-      case TR::ardbari: return TR::awrtbari;
+      case TR::brdbari: return TR::bstorei;
+      case TR::srdbari: return TR::sstorei;
+      case TR::irdbari: return TR::istorei;
+      case TR::lrdbari: return TR::lstorei;
+      case TR::frdbari: return TR::fstorei;
+      case TR::drdbari: return TR::dstorei;
+      case TR::ardbari: return TR::astorei;
       default: break;
       }
 
@@ -628,13 +628,19 @@ OMR::IL::opCodeForCorrespondingIndirectStore(TR::ILOpCodes storeOpCode)
       case TR::fstorei:  return TR::floadi;
       case TR::dstorei:  return TR::dloadi;
       case TR::astorei:  return TR::aloadi;
-      case TR::awrtbari:  return TR::aloadi;
       case TR::vstorei:  return TR::vloadi;
       case TR::cstorei: return TR::cloadi;
       case TR::bustorei: return TR::buloadi;
       case TR::iustore: return TR::iuload;
       case TR::iustorei: return TR::iuloadi;
       case TR::lustorei: return TR::luloadi;
+      case TR::awrtbari: return TR::aloadi;
+      case TR::bwrtbari: return TR::bloadi;
+      case TR::swrtbari: return TR::sloadi;
+      case TR::iwrtbari: return TR::iloadi;
+      case TR::lwrtbari: return TR::lloadi;
+      case TR::fwrtbari: return TR::floadi;
+      case TR::dwrtbari: return TR::dloadi;
 
       default: break;
       }

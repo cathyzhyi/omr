@@ -85,6 +85,12 @@ TR_FieldPrivatizer::TR_FieldPrivatizer(TR::OptimizationManager *manager)
 
 int32_t TR_FieldPrivatizer::perform()
    {
+
+   // TODO: need to confirm places calling opCodeFor* APIs are doing the right
+   // thing fore readbar and wrtbar
+   if (comp()->mayContainReadbarOrWritebar())
+      return 0;
+
    TR::StackMemoryRegion stackMemoryRegion(*trMemory());
 
    _postDominators = NULL;

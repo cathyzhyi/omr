@@ -544,6 +544,8 @@ public:
    bool hasNativeCall()                         { return _flags.testAny(HasNativeCall); }
    void setHasNativeCall()                      { _flags.set(HasNativeCall); }
 
+   bool mayContainReadbarOrWritebar()                     { return false;}
+
    // P codegen
    TR::list<TR_PrefetchInfo*> &getExtraPrefetchInfo() { return _extraPrefetchInfo; }
    TR_PrefetchInfo *findExtraPrefetchInfo(TR::Node * node, bool use = true);

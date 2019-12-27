@@ -69,10 +69,19 @@ struct ILGenFailure : public virtual CompilationException
  * Recoverable IL Generation Failure exception type.
  *
  * Thrown on an IL Generation Failure condition which the compiler can
- * recover either by continuing the compilation, or by allowing a
- * recompilation to occur.
+ * recover either by
+ * 1. continuing the compilation of the caller method if the failing method is an inlined callee
+ * 2. by allowing a recompilation to occur for the failing method itself
  */
 struct RecoverableILGenException : public virtual CompilationException
+   {
+   virtual const char* what() const throw() { return "Recoverable IL Gen Exception"; }
+   };
+
+/**
+ *  Do not allow recompilation when the failing method is the method being compiled.
+ */
+struct NoRecompilationRecoverableILGenException: public RecoverableILGenException
    {
    virtual const char* what() const throw() { return "Recoverable IL Gen Exception"; }
    };

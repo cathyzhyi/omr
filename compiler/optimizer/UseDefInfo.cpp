@@ -189,7 +189,11 @@ void TR_UseDefInfo::prepareUseDefInfo(bool requiresGlobals, bool prefersGlobals,
    comp()->incVisitCount();
    TR::TreeTop *treeTop;
    for (treeTop = comp()->getStartTree(); treeTop != NULL; treeTop = treeTop->getNextTreeTop())
+      {
+      traceMsg(comp(), "before findTrivialSymbolsToExclude n%dn\n", treeTop->getNode()->getGlobalIndex());
       findTrivialSymbolsToExclude(treeTop->getNode(), treeTop, aux);
+      traceMsg(comp(), "after findTrivialSymbolsToExclude n%dn\n", treeTop->getNode()->getGlobalIndex());
+      }
 
    if (trace())
       {
@@ -552,9 +556,11 @@ bool TR_UseDefInfo::isLoadAddrUse(TR::Node * node)
 
 void TR_UseDefInfo::findTrivialSymbolsToExclude(TR::Node *node, TR::TreeTop *treeTop, AuxiliaryData &aux)
    {
+   traceMsg(comp(), "findTrivialSymbolsToExclude 1 %p\n", node);
    if (node->getVisitCount() == comp()->getVisitCount())
       return;
 
+   traceMsg(comp(), "findTrivialSymbolsToExclude n%dn\n", node->getGlobalIndex());
    node->setVisitCount(comp()->getVisitCount());
 
    int32_t i;
@@ -562,6 +568,7 @@ void TR_UseDefInfo::findTrivialSymbolsToExclude(TR::Node *node, TR::TreeTop *tre
       findTrivialSymbolsToExclude(node->getChild(i), treeTop, aux);
 
 
+   traceMsg(comp(), "findTrivialSymbolsToExclude 2 n%dn\n", node->getGlobalIndex());
    if (node->getOpCode().hasSymbolReference() &&
        aux._neverReferencedSymbols.get(node->getSymbolReference()->getReferenceNumber()))
       {
@@ -590,7 +597,7 @@ void TR_UseDefInfo::findTrivialSymbolsToExclude(TR::Node *node, TR::TreeTop *tre
             aux._neverWrittenSymbols.reset(symRefNum);
 
             if (trace())
-               traceMsg(comp(), "Resetting write bit %d at node %p\n", symRefNum, node);
+               traceMsg(comp(), "Resetting write bit %d at node n%dn\n", symRefNum, node->getGlobalIndex());
 
             if (!aux._onceWrittenSymbolsIndices[symRefNum].IsNull())
                {
@@ -599,7 +606,7 @@ void TR_UseDefInfo::findTrivialSymbolsToExclude(TR::Node *node, TR::TreeTop *tre
                else
                   aux._onceWrittenSymbolsIndices[symRefNum][node->getGlobalIndex()] = true;
                if (trace())
-                  traceMsg(comp(), "Sym ref %d written once at node %p\n", symRefNum, treeTop->getNode());
+                  traceMsg(comp(), "Sym ref %d written once at node n%dn\n", symRefNum, treeTop->getNode()->getGlobalIndex());
                }
             }
          else if (!aux._onceWrittenSymbolsIndices[symRefNum].IsNull())
@@ -621,7 +628,9 @@ void TR_UseDefInfo::findTrivialSymbolsToExclude(TR::Node *node, TR::TreeTop *tre
             aux._loadsBySymRefNum[symRefNum] = node;
 
             if (trace())
-               traceMsg(comp(), "Resetting read bit %d at node %p\n", symRefNum, node);
+               traceMsg(comp(), "Resetting read bit %d at node n%dn\n", symRefNum, node->getGlobalIndex());
+            if (trace())
+               traceMsg(comp(), "findTrivialSymbolsToExclude 2 n%dn\n", node->getGlobalIndex());
             }
          else if (!aux._onceReadSymbolsIndices[symRefNum].IsNull())
             {
@@ -636,6 +645,8 @@ void TR_UseDefInfo::findTrivialSymbolsToExclude(TR::Node *node, TR::TreeTop *tre
             }
          }
       }
+   if (trace())
+      traceMsg(comp(), "findTrivialSymbolsToExclude 3 n%dn\n\n", node->getGlobalIndex());
    }
 
 bool TR_UseDefInfo::isTrivialUseDefNode(TR::Node *node, AuxiliaryData &aux)

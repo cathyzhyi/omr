@@ -3887,6 +3887,9 @@ TR::Node *constrainCheckcast(OMR::ValuePropagation *vp, TR::Node *node)
 
    if (objectConstraint)
       {
+      traceMsg(vp->comp(), "objectConstraint isValue %d\n", isValue(objectConstraint));
+      if (castConstraint && castConstraint->getClass())
+         traceMsg(vp->comp(), "castConstraint isValueTypeClass %d\n", TR::Compiler->cls.isValueTypeClass(castConstraint->getClass()));
       if (objectConstraint->isNullObject())
          {
          result = 1;

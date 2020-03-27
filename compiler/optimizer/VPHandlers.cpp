@@ -3891,6 +3891,12 @@ TR::Node *constrainCheckcast(OMR::ValuePropagation *vp, TR::Node *node)
          {
          result = 1;
          }
+      else if (TR::Compiler->om.areValueTypesEnabled() && castConstraint && castConstraint->getClass() &&
+              (isValue(objectConstraint) == TR_yes && TR::Compiler->cls.isValueTypeClass(castConstraint->getClass()) ||
+              isValue(objectConstraint) == TR_no && TR::Compiler->cls.isValueTypeClass(castConstraint->getClass())))
+         {
+         result = 0;
+         }
       else if (objectConstraint == castConstraint &&
                  objectConstraint->isClassObject() != TR_yes)
          {
